@@ -17,10 +17,8 @@ import java.util.Locale
 
 class Hitxhot : ParsedHttpSource() {
 
-    companion object {
-        private val DATE_FORMAT by lazy {
-            SimpleDateFormat("EEE MMM MM yyyy", Locale.US)
-        }
+    private val dateFormat by lazy {
+        SimpleDateFormat("EEE MMM MM yyyy", Locale.US)
     }
 
     override val baseUrl = "https://hitxhot.com"
@@ -112,7 +110,7 @@ class Hitxhot : ParsedHttpSource() {
         val chapterPage = mutableListOf<SChapter>()
         val title = document.selectFirst(".box-mt-output").text()
         val sIndex = title.indexOf("page", ignoreCase = true)
-        val pageNum = if (sIndex == -1) {
+        val pageNum = if (sIndex < 0) {
             1
         } else {
             val page = title.substring(sIndex + 5, title.length)
@@ -121,12 +119,12 @@ class Hitxhot : ParsedHttpSource() {
 
         val time = document.select(".it-date").text()
         for (pIndex in pageNum downTo 1) {
-            val url = response.request.url.toString().plus("?page=$pIndex")
+            val url = response.request.url.toString().removeSuffix("?m=1")
             val chapter = SChapter.create()
-            chapter.setUrlWithoutDomain(url)
+            chapter.setUrlWithoutDomain(url.plus("?page=$pIndex"))
             chapter.chapter_number = pIndex.toFloat()
             chapter.name = "Page: $pIndex"
-            chapter.date_upload = DATE_FORMAT.parse(time)?.time ?: 0L
+            chapter.date_upload = dateFormat.parse(time)?.time ?: 0L
             chapterPage.add(chapter)
         }
         return chapterPage
