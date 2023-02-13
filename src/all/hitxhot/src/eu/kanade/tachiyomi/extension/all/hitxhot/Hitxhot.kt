@@ -12,11 +12,16 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.select.Evaluator
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 class Hitxhot : ParsedHttpSource() {
+
+    companion object {
+        private val DATE_FORMAT by lazy {
+            SimpleDateFormat("EEE MMM MM yyyy", Locale.US)
+        }
+    }
 
     override val baseUrl = "https://hitxhot.com"
 
@@ -42,30 +47,24 @@ class Hitxhot : ParsedHttpSource() {
 
     override fun latestUpdatesParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangasClass = document.selectFirst(Evaluator.Class("videos")).children()
         val mangas = mutableListOf<SManga>()
-        for (index in 0 until mangasClass.size) {
-            if (!mangasClass[index].`is`(Evaluator.Tag("style"))) {
-                val cardBody = mangasClass[index].selectFirst(Evaluator.Class("thcovering-video"))
-                val info = cardBody.selectFirst(Evaluator.Class("denomination"))
-                if (info != null) {
-                    val image = cardBody.selectFirst(Evaluator.Class("xld")).attr("src")
-                    val mUrl = info.attr("href")
-                    val mTitle = info.text()
-                    val m = SManga.create().apply {
-                        url = mUrl
-                        title = mTitle
-                        thumbnail_url = image
-                        status = SManga.COMPLETED
-                        initialized = false
-                    }
-                    mangas.add(m)
-                }
+        val mangasClass = document.select(".thcovering-video > ins > a")
+        mangasClass.forEach {
+            val mUrl = it.attr("href")
+            val mTitle = it.attr("title")
+            val thumbnail = it.selectFirst(".xld").attr("src")
+            val mange = SManga.create().apply {
+                url = mUrl
+                title = mTitle
+                thumbnail_url = thumbnail
+                status = SManga.COMPLETED
+                initialized = false
             }
+            mangas.add(mange)
         }
 
-        val lastTag = document.select(".pagination-site > li > a").last()
-        return MangasPage(mangas, lastTag.hasClass("next"))
+        val lastPageTag = document.select(".pagination-site > li > a").last()
+        return MangasPage(mangas, lastPageTag.hasClass("next"))
     }
 
     // Popular
@@ -85,7 +84,7 @@ class Hitxhot : ParsedHttpSource() {
     override fun searchMangaNextPageSelector() = latestUpdatesNextPageSelector()
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         return when {
-            query.isNotEmpty() -> GET("$baseUrl/?search=$query&start=${20 * (page - 1)}")
+            query.isNotEmpty() -> GET("$baseUrl/?search=$query")
             else -> popularMangaRequest(page)
         }
     }
@@ -111,85 +110,26 @@ class Hitxhot : ParsedHttpSource() {
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
         val chapterPage = mutableListOf<SChapter>()
-        val lastTag = document.select(".c-content > div")
-        val isSingle = !lastTag.hasClass("pag")
-        if (isSingle) {
-            val chapter = SChapter.create()
-            chapter.setUrlWithoutDomain(response.request.url.toString())
-            chapter.chapter_number = 1f
-            chapter.name = "Page: 1"
-            chapter.date_upload = SimpleDateFormat(
-                "EEE MMM MM yyyy",
-                Locale.US
-            ).parse(document.select(".it-date").text())?.time ?: 0L
-            chapterPage.add(chapter)
-            return chapterPage
-        }
-
-        val s = document.select(".pagination-site > li > a")
-        s.forEachIndexed { index, element ->
-            if (element.text().toIntOrNull() != null) {
-                val chapter = SChapter.create()
-                chapter.setUrlWithoutDomain(element.attr("abs:href"))
-                chapter.chapter_number = index.toFloat()
-                chapter.name = "Page: ${index + 1}"
-                chapter.date_upload = SimpleDateFormat(
-                    "EEE MMM MM yyyy",
-                    Locale.US
-                ).parse(document.select(".it-date").text())?.time ?: 0L
-                chapterPage.add(chapter)
-            }
-        }
-
-        val lastChapter = chapterPage.last()
-        val hasNext = s.last().text().contains("next", ignoreCase = true)
-        val lastUrl = if (lastChapter.url.endsWith("#")) {
-            lastChapter.url.replace("#", "&page=1")
+        val title = document.selectFirst(".box-mt-output").text()
+        val sIndex = title.indexOf("page", ignoreCase = true)
+        val pageNum = if (sIndex == -1) {
+            1
         } else {
-            lastChapter.url
+            val page = title.substring(sIndex + 5, title.length)
+            page.split("/")[1].toInt()
         }
-        visNextChapter(
-            baseUrl + lastUrl,
-            s.size - 1,
-            lastChapter.chapter_number,
-            hasNext,
-            chapterPage
-        )
-        chapterPage.reverse()
-        return chapterPage
-    }
 
-    private fun visNextChapter(
-        lastUrl: String,
-        lastPage: Int,
-        lastChapterNum: Float,
-        hasNext: Boolean,
-        chapterPage: MutableList<SChapter>
-    ) {
-        if (hasNext) {
-            val newUrl = lastUrl.replace("page=$lastPage", "page=${lastPage + 1}")
-            val c = client.newCall(GET(newUrl)).execute().asJsoup()
+        val time = document.select(".it-date").text()
+        for (pIndex in pageNum downTo 1) {
+            val url = response.request.url.toString().plus("?page=$pIndex")
             val chapter = SChapter.create()
-            chapter.setUrlWithoutDomain(newUrl)
-            chapter.chapter_number = lastChapterNum + 1
-            chapter.name = "Page: ${lastPage + 1}"
-            chapter.date_upload = SimpleDateFormat(
-                "EEE MMM MM yyyy",
-                Locale.US
-            ).parse(c.select(".it-date").text())?.time ?: 0L
+            chapter.setUrlWithoutDomain(url)
+            chapter.chapter_number = pIndex.toFloat()
+            chapter.name = "Page: $pIndex"
+            chapter.date_upload = DATE_FORMAT.parse(time)?.time ?: 0L
             chapterPage.add(chapter)
-
-            val lastChapter = chapterPage.last()
-            val s = c.select(".pagination-site > li > a")
-            val mHasNext = s.last().text().contains("next", ignoreCase = true)
-            visNextChapter(
-                baseUrl + lastChapter.url,
-                chapterPage.size - 1,
-                lastChapterNum + 1,
-                mHasNext,
-                chapterPage
-            )
         }
+        return chapterPage
     }
 
     override fun chapterListSelector() = throw UnsupportedOperationException("Not used")
