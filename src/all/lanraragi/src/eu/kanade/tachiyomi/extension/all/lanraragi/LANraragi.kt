@@ -92,7 +92,7 @@ open class LANraragi(private val suffix: String = "") : ConfigurableSource, Unme
         val archive = json.decodeFromString<Archive>(response.body!!.string())
         val uri = getApiUriBuilder("/api/archives/${archive.arcid}/files")
         val prefClearNew = preferences.getBoolean(NEW_ONLY_KEY, NEW_ONLY_DEFAULT)
-        
+
         if (archive.isnew == "true" && prefClearNew) {
             val clearNew = Request.Builder()
                 .url("$baseUrl/api/archives/${archive.arcid}/isnew")
