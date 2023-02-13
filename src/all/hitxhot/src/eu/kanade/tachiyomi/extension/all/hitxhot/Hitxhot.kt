@@ -144,7 +144,7 @@ class Hitxhot : ParsedHttpSource() {
         val lastChapter = chapterPage.last()
         val hasNext = s.last().text().contains("next", ignoreCase = true)
         val lastUrl = if (lastChapter.url.endsWith("#")) {
-            lastChapter.url.replace("#", "page=1")
+            lastChapter.url.replace("#", "&page=1")
         } else {
             lastChapter.url
         }
