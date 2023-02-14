@@ -18,6 +18,7 @@ android {
     }
 
     defaultConfig {
+        multiDexEnabled false
         minSdkVersion AndroidConfig.minSdk
         targetSdkVersion AndroidConfig.targetSdk
         applicationIdSuffix pkgNameSuffix
