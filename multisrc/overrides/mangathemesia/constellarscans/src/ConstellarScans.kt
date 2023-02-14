@@ -45,7 +45,7 @@ class ConstellarScans : MangaThemesia("Constellar Scans", "https://constellarsca
 
     private val mobileUserAgent by lazy {
         val req = GET(UA_DB_URL)
-        val data = client.newCall(req).execute().body!!.use {
+        val data = client.newCall(req).execute().body.use {
             json.parseToJsonElement(it.string()).jsonArray
         }.mapNotNull {
             it.jsonObject["user-agent"]?.jsonPrimitive?.content?.takeIf { ua ->
@@ -65,7 +65,7 @@ class ConstellarScans : MangaThemesia("Constellar Scans", "https://constellarsca
         super.pageListRequest(chapter).newBuilder()
             .header(
                 "Accept",
-                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
             )
             .header("Sec-Fetch-Site", "same-origin")
             .header("Sec-Fetch-Mode", "navigate")
@@ -88,7 +88,7 @@ class ConstellarScans : MangaThemesia("Constellar Scans", "https://constellarsca
     }
 
     private val funkyScript by lazy {
-        client.newCall(GET(FUNKY_SCRIPT_URL)).execute().body!!.string()
+        client.newCall(GET(FUNKY_SCRIPT_URL)).execute().body.string()
     }
 
     @SuppressLint("SetJavaScriptEnabled")

@@ -91,7 +91,7 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
 
     override fun popularMangaFromElement(element: Element): SManga {
         val manga = SManga.create()
-        element.select("a").first().let {
+        element.select("a").first()!!.let {
             manga.setUrlWithoutDomain(it.attr("href"))
             manga.title = it.text()
             manga.thumbnail_url = "$baseUrl/imgs/${it.attr("href").replace(Regex("/$"),".jpg").replace("manga","mangas")}".lowercase(Locale.ROOT)
@@ -150,7 +150,7 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
                     throw Exception("Code ${searchResponse.code} inattendu")
                 }
 
-                val jsonResult = json.parseToJsonElement(searchResponse.body!!.string()).jsonArray
+                val jsonResult = json.parseToJsonElement(searchResponse.body.string()).jsonArray
 
                 if (jsonResult.isEmpty()) {
                     Log.d("japscan", "Search not returning anything, using duckduckgo")
@@ -174,7 +174,7 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
 
     override fun searchMangaParse(response: Response): MangasPage {
         if ("live-search" in response.request.url.toString()) {
-            val jsonResult = json.parseToJsonElement(response.body!!.string()).jsonArray
+            val jsonResult = json.parseToJsonElement(response.body.string()).jsonArray
 
             val mangaList = jsonResult.map { jsonEl -> searchMangaFromJson(jsonEl.jsonObject) }
 
@@ -207,7 +207,7 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
     }
 
     override fun mangaDetailsParse(document: Document): SManga {
-        val infoElement = document.selectFirst("#main .card-body")
+        val infoElement = document.selectFirst("#main .card-body")!!
 
         val manga = SManga.create()
         manga.thumbnail_url = infoElement.select("img").attr("abs:src")
@@ -240,13 +240,13 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
     // Those have a span.badge "SPOILER" or "RAW". The additional pseudo selector makes sure to exclude these from the chapter list.
 
     override fun chapterFromElement(element: Element): SChapter {
-        val urlElement = element.selectFirst("a")
+        val urlElement = element.selectFirst("a")!!
 
         val chapter = SChapter.create()
         chapter.setUrlWithoutDomain(urlElement.attr("href"))
         chapter.name = urlElement.ownText()
         // Using ownText() doesn't include childs' text, like "VUS" or "RAW" badges, in the chapter name.
-        chapter.date_upload = element.selectFirst("span").text().trim().let { parseChapterDate(it) }
+        chapter.date_upload = element.selectFirst("span")!!.text().trim().let { parseChapterDate(it) }
         return chapter
     }
 
@@ -276,7 +276,7 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
             it.attr("src").contains("zjs", ignoreCase = true)
         }.attr("src")
         Log.d("japscan", "ZJS at $zjsurl")
-        val zjs = client.newCall(GET(baseUrl + zjsurl, headers)).execute().body!!.string()
+        val zjs = client.newCall(GET(baseUrl + zjsurl, headers)).execute().body.string()
 
         val stringLookupTables = decodingStringsRe.findAll(zjs).mapNotNull {
             it.groupValues[1].takeIf {
@@ -289,7 +289,7 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
         }
         Log.d("japscan", "lookup tables: $stringLookupTables")
 
-        val scrambledData = document.getElementById("data").attr("data-data")
+        val scrambledData = document.getElementById("data")!!.attr("data-data")
 
         for (i in 0..1) {
             Log.d("japscan", "descramble attempt $i")
@@ -332,13 +332,15 @@ class Japscan : ConfigurableSource, ParsedHttpSource() {
             }
             FilterList(
                 Filter.Header("Page alphabétique"),
-                PageList(pagelist.toTypedArray())
+                PageList(pagelist.toTypedArray()),
             )
-        } else FilterList(
-            Filter.Header("Page alphabétique"),
-            TextField("Page #"),
-            Filter.Header("Appuyez sur reset pour la liste")
-        )
+        } else {
+            FilterList(
+                Filter.Header("Page alphabétique"),
+                TextField("Page #"),
+                Filter.Header("Appuyez sur reset pour la liste"),
+            )
+        }
     }
 
     private var pageNumberDoc: Document? = null

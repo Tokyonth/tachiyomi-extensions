@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.source.online.ParsedHttpSource
 import okhttp3.Call
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -72,11 +73,11 @@ class Nana : ParsedHttpSource() {
         "#thumbs_container > .id1"
 
     override fun searchMangaFromElement(element: Element): SManga = SManga.create().apply {
-        val a = element.selectFirst(".id3 > a")
+        val a = element.selectFirst(".id3 > a")!!
         setUrlWithoutDomain(a.absUrl("href"))
         title = a.attr("title")
 
-        val img = a.selectFirst("> img")
+        val img = a.selectFirst("> img")!!
         thumbnail_url = img.absUrl("src")
         author = img.attr("alt")
             .replace("$title by ", "")
@@ -86,10 +87,11 @@ class Nana : ParsedHttpSource() {
             .joinToString { it.text() }
 
         status = SManga.COMPLETED
+        update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
         initialized = true
     }
 
-    override fun searchMangaNextPageSelector(): String? =
+    override fun searchMangaNextPageSelector(): String =
         "a.paginate_button.current + a.paginate_button"
 
     // Latest
@@ -102,7 +104,7 @@ class Nana : ParsedHttpSource() {
     override fun latestUpdatesFromElement(element: Element): SManga =
         throw UnsupportedOperationException("Not used.")
 
-    override fun latestUpdatesNextPageSelector(): String? =
+    override fun latestUpdatesNextPageSelector(): String =
         throw UnsupportedOperationException("Not used.")
 
     // Details
@@ -121,8 +123,8 @@ class Nana : ParsedHttpSource() {
                     name = "Chapter"
                     date_upload = 0L
                     chapter_number = 1F
-                }
-            )
+                },
+            ),
         )
     }
 

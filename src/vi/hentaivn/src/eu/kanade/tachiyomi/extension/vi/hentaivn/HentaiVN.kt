@@ -57,7 +57,7 @@ class HentaiVN : ParsedHttpSource() {
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.ENGLISH)
 
-    //latestUpdates
+    // latestUpdates
     override fun latestUpdatesRequest(page: Int): Request {
         return GET("$baseUrl/chap-moi.html?page=$page", headers)
     }
@@ -66,7 +66,7 @@ class HentaiVN : ParsedHttpSource() {
     override fun latestUpdatesNextPageSelector() = "ul.pagination > li:contains(Next)"
     override fun latestUpdatesFromElement(element: Element): SManga {
         val manga = SManga.create()
-        element.select(".box-description a").first().let {
+        element.select(".box-description a").first()!!.let {
             manga.setUrlWithoutDomain(it.attr("href"))
             manga.title = it.text().trim()
         }
@@ -74,7 +74,7 @@ class HentaiVN : ParsedHttpSource() {
         return manga
     }
 
-    //Popular
+    // Popular
     override fun popularMangaRequest(page: Int): Request {
         return GET("$baseUrl/danh-sach.html?page=$page", headers)
     }
@@ -83,12 +83,12 @@ class HentaiVN : ParsedHttpSource() {
     override fun popularMangaNextPageSelector() = latestUpdatesNextPageSelector()
     override fun popularMangaSelector() = latestUpdatesSelector()
 
-    //Chapter
+    // Chapter
     override fun chapterListSelector() = "table.listing > tbody > tr"
     override fun chapterFromElement(element: Element): SChapter {
         if (element.select("a").isEmpty()) throw Exception(element.select("h2").html())
         val chapter = SChapter.create()
-        element.select("a").first().let {
+        element.select("a").first()!!.let {
             chapter.name = it.select("h2").text()
             chapter.setUrlWithoutDomain(it.attr("href"))
         }
@@ -111,11 +111,11 @@ class HentaiVN : ParsedHttpSource() {
 
     override fun imageUrlParse(document: Document) = ""
 
-    //Detail
+    // Detail
     override fun mangaDetailsParse(document: Document): SManga {
         val infoElement = document.select(".main > .page-left > .left-info > .page-info")
         val manga = SManga.create()
-        manga.title = document.selectFirst(".breadcrumb2 li:last-child span").text()
+        manga.title = document.selectFirst(".breadcrumb2 li:last-child span")!!.text()
         manga.author = infoElement.select("p:contains(Tác giả:) a").text()
         manga.description = infoElement.select(":root > p:contains(Nội dung:) + p").text()
         manga.genre = infoElement.select("p:contains(Thể loại:) a").joinToString { it.text() }
@@ -133,20 +133,21 @@ class HentaiVN : ParsedHttpSource() {
         else -> SManga.UNKNOWN
     }
 
-    //Pages
+    // Pages
     override fun pageListParse(document: Document): List<Page> {
         return document.select("#image > img").mapIndexed { i, e ->
             Page(i, imageUrl = e.attr("abs:src"))
         }
     }
 
-    //Search
+    // Search
     override fun searchMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
         if (document.select("p").toString()
-                .contains("Bạn chỉ có thể sử dụng chức năng này khi đã đăng ký thành viên")
-        )
+            .contains("Bạn chỉ có thể sử dụng chức năng này khi đã đăng ký thành viên")
+        ) {
             throw Exception("Đăng nhập qua WebView để kích hoạt tìm kiếm")
+        }
 
         val mangas = document.select(searchMangaSelector()).map { element ->
             searchMangaFromElement(element)
@@ -161,7 +162,7 @@ class HentaiVN : ParsedHttpSource() {
 
     override fun searchMangaFromElement(element: Element): SManga {
         val manga = SManga.create()
-        element.select(".search-des > a, .box-description a").first().let {
+        element.select(".search-des > a, .box-description a").first()!!.let {
             manga.setUrlWithoutDomain(it.attr("href"))
             manga.title = it.text().trim()
         }
@@ -181,7 +182,7 @@ class HentaiVN : ParsedHttpSource() {
     override fun fetchSearchManga(
         page: Int,
         query: String,
-        filters: FilterList
+        filters: FilterList,
     ): Observable<MangasPage> {
         val authorFilter =
             (if (filters.isEmpty()) getFilterList() else filters).find { it is Author } as Author
@@ -194,8 +195,8 @@ class HentaiVN : ParsedHttpSource() {
                         .addQueryParameter("key", authorFilter.state)
                         .addQueryParameter("page", page.toString())
                         .build().toString(),
-                    headers
-                )
+                    headers,
+                ),
             )
                 .asObservableSuccess()
                 .map { response -> latestUpdatesParse(response) }
@@ -207,8 +208,8 @@ class HentaiVN : ParsedHttpSource() {
                         .addQueryParameter("key", searchAllFilter.state)
                         .addQueryParameter("page", page.toString())
                         .build().toString(),
-                    headers
-                )
+                    headers,
+                ),
             )
                 .asObservableSuccess()
                 .map { response -> latestUpdatesParse(response) }
@@ -247,7 +248,7 @@ class HentaiVN : ParsedHttpSource() {
                     val group = getGroupList()[filter.state]
                     url.addQueryParameter("group", group.id)
                 }
-                else -> return@forEach
+                else -> {}
             }
         }
 
@@ -454,7 +455,7 @@ class HentaiVN : ParsedHttpSource() {
         Genre("Yandere", "112"),
         Genre("Yaoi", "96"),
         Genre("Yuri", "97"),
-        Genre("Zombie", "128")
+        Genre("Zombie", "128"),
     )
 
     // jQuery.makeArray($('#container > div > div > div.box-box.textbox > form > ul:nth-child(8) > li').map((i, e) => `TransGroup("${e.textContent}", "${e.children[0].value}")`)).join(',\n')
@@ -510,6 +511,6 @@ class HentaiVN : ParsedHttpSource() {
         TransGroup("The Ignite Team", "50"),
         TransGroup("Cuồng Loli", "51"),
         TransGroup("Depressed Lolicons Squad - DLS", "52"),
-        TransGroup("Heaven Of The Fuck", "53")
+        TransGroup("Heaven Of The Fuck", "53"),
     )
 }

@@ -51,7 +51,7 @@ class Mangago : ParsedHttpSource() {
             val cols = response.request.url.queryParameter("cols")?.toIntOrNull()
                 ?: return@addInterceptor response
 
-            val image = unscrambleImage(response.body!!.byteStream(), key, cols)
+            val image = unscrambleImage(response.body.byteStream(), key, cols)
             val body = image.toResponseBody("image/jpeg".toMediaTypeOrNull())
             return@addInterceptor response.newBuilder()
                 .body(body)
@@ -78,12 +78,12 @@ class Mangago : ParsedHttpSource() {
     private val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.ENGLISH)
 
     private fun mangaFromElement(element: Element) = SManga.create().apply {
-        val linkElement = element.selectFirst(".thm-effect")
+        val linkElement = element.selectFirst(".thm-effect")!!
 
         setUrlWithoutDomain(linkElement.attr("href"))
         title = linkElement.attr("title")
 
-        val thumbnailElem = linkElement.selectFirst("img")
+        val thumbnailElem = linkElement.selectFirst("img")!!
         thumbnail_url = thumbnailElem.attr("abs:data-src").ifBlank { thumbnailElem.attr("abs:src") }
     }
 
@@ -150,14 +150,14 @@ class Mangago : ParsedHttpSource() {
     override fun searchMangaNextPageSelector() = genreListingNextPageSelector
 
     override fun mangaDetailsParse(document: Document) = SManga.create().apply {
-        title = document.selectFirst(".w-title h1").text()
-        document.getElementById("information").let {
-            thumbnail_url = it.selectFirst("img").attr("abs:src")
-            description = it.selectFirst(".manga_summary").text()
+        title = document.selectFirst(".w-title h1")!!.text()
+        document.getElementById("information")!!.let {
+            thumbnail_url = it.selectFirst("img")!!.attr("abs:src")
+            description = it.selectFirst(".manga_summary")!!.text()
             it.select(".manga_info li, .manga_right tr").forEach { el ->
-                when (el.selectFirst("b, label").text().lowercase()) {
+                when (el.selectFirst("b, label")!!.text().lowercase()) {
                     "alternative:" -> description += "\n\n${el.text()}"
-                    "status:" -> status = when (el.selectFirst("span").text().lowercase()) {
+                    "status:" -> status = when (el.selectFirst("span")!!.text().lowercase()) {
                         "ongoing" -> SManga.ONGOING
                         "completed" -> SManga.COMPLETED
                         else -> SManga.UNKNOWN
@@ -176,7 +176,7 @@ class Mangago : ParsedHttpSource() {
 
         setUrlWithoutDomain(link.attr("href"))
         name = link.text().trim()
-        date_upload = kotlin.runCatching {
+        date_upload = runCatching {
             dateFormat.parse(element.select("td:last-child").text().trim())?.time
         }.getOrNull() ?: 0L
     }
@@ -193,7 +193,7 @@ class Mangago : ParsedHttpSource() {
         }.attr("abs:src")
 
         val obfuscatedChapterJs =
-            client.newCall(GET(chapterJsUrl, headers)).execute().body!!.string()
+            client.newCall(GET(chapterJsUrl, headers)).execute().body.string()
         val deobfChapterJs = SoJsonV4Deobfuscator.decode(obfuscatedChapterJs)
 
         val key = findHexEncodedVariable(deobfChapterJs, "key").decodeHex()
@@ -264,8 +264,8 @@ class Mangago : ParsedHttpSource() {
         "Status",
         listOf(
             StatusFilter("Completed", "f", true),
-            StatusFilter("Ongoing", "o", true)
-        )
+            StatusFilter("Ongoing", "o", true),
+        ),
     ) {
         override fun addToUrl(builder: HttpUrl.Builder) {
             state.forEach {
@@ -279,7 +279,7 @@ class Mangago : ParsedHttpSource() {
         private val query: String,
         private val vals: Array<Pair<String, String>>,
         private val firstIsUnspecified: Boolean = true,
-        state: Int = 0
+        state: Int = 0,
     ) : UriFilter, Filter.Select<String>(name, vals.map { it.first }.toTypedArray(), state) {
         override fun addToUrl(builder: HttpUrl.Builder) {
             if (state != 0 || !firstIsUnspecified) {
@@ -296,7 +296,7 @@ class Mangago : ParsedHttpSource() {
             Pair("Views", "view"),
             Pair("Comment Count", "comment_count"),
             Pair("Creation Date", "create_date"),
-            Pair("Update Date", "update_date")
+            Pair("Update Date", "update_date"),
         ),
         state = 1,
     )
@@ -342,8 +342,8 @@ class Mangago : ParsedHttpSource() {
             GenreFilter("Tragedy"),
             GenreFilter("Bara"),
             GenreFilter("Shotacon"),
-            GenreFilter("Webtoons")
-        )
+            GenreFilter("Webtoons"),
+        ),
     )
 
     private fun findHexEncodedVariable(input: String, variable: String): String {
@@ -457,7 +457,7 @@ class Mangago : ParsedHttpSource() {
                     return str;
                 }
                 """.trimIndent(),
-                "?"
+                "?",
             )
         }
     }

@@ -55,7 +55,7 @@ class Mangaku : ParsedHttpSource() {
         POST(
             "$baseUrl/daftar-komik-bahasa-indonesia/",
             headers,
-            FormBody.Builder().add("ritem", "hot").build()
+            FormBody.Builder().add("ritem", "hot").build(),
         )
 
     override fun popularMangaParse(response: Response): MangasPage {
@@ -113,8 +113,7 @@ class Mangaku : ParsedHttpSource() {
         title = document.select(".post.singlep .titles a").text().replace("Bahasa Indonesia", "").trim()
         thumbnail_url = document.select(".post.singlep img").attr("abs:src")
         document.select("#wrapper-a #content-a .inf").forEach {
-            val key = it.select(".infx").text()
-            when (key) {
+            when (it.select(".infx").text()) {
                 "Genre" -> genre = it.select("p a[rel=tag]").joinToString { it.text() }
                 "Author" -> author = it.select("p").text()
                 "Sinopsis" -> description = it.select("p").text()
@@ -127,19 +126,20 @@ class Mangaku : ParsedHttpSource() {
     override fun chapterFromElement(element: Element): SChapter = SChapter.create().apply {
         setUrlWithoutDomain(element.attr("href"))
         name = element.text().let {
-            if (it.contains("–"))
+            if (it.contains("–")) {
                 it.split("–")[1].trim()
-            else
+            } else {
                 it
+            }
         }
     }
 
     override fun pageListParse(document: Document): List<Page> {
-        val wpRoutineUrl = document.selectFirst("script[src*=wp-routine]").attr("abs:src")
+        val wpRoutineUrl = document.selectFirst("script[src*=wp-routine]")!!.attr("abs:src")
         Log.d("mangaku", "wp-routine: $wpRoutineUrl")
 
         val wpRoutineJs = client.newCall(GET(wpRoutineUrl, headers)).execute().use {
-            it.body!!.string()
+            it.body.string()
         }
         val upt3 = wpRoutineJs
             .substringAfterLast("upt3(")
@@ -150,7 +150,7 @@ class Mangaku : ParsedHttpSource() {
             .reversed()
         Log.d("mangaku", "app-mgk: $appMgk")
 
-        val dtxScript = document.selectFirst("script:containsData(var dtx =)").html()
+        val dtxScript = document.selectFirst("script:containsData(var dtx =)")!!.html()
         val dtxIsEqualTo = dtxScript
             .substringAfter("var dtx = ")
             .substringBefore(";")
@@ -158,7 +158,7 @@ class Mangaku : ParsedHttpSource() {
             .substringAfter("var $dtxIsEqualTo= \"")
             .substringBefore("\"")
 
-        val mainScriptTag = document.selectFirst("script:containsData(await jrsx)").html()
+        val mainScriptTag = document.selectFirst("script:containsData(await jrsx)")!!.html()
         val jrsxArgs = mainScriptTag
             .substringAfter("await jrsx(")
             .substringBefore(");")
@@ -196,7 +196,7 @@ class Mangaku : ParsedHttpSource() {
         return re.findAll(htmImageList).mapIndexed { idx, it ->
             val url = Base64.decode(
                 CryptoAES.decrypt(it.groupValues[1], fifthArgValueDigest),
-                Base64.DEFAULT
+                Base64.DEFAULT,
             )
                 .toString(Charsets.UTF_8)
                 .replace("+", "%20")

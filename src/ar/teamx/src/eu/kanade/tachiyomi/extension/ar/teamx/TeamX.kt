@@ -45,10 +45,13 @@ class TeamX : ParsedHttpSource() {
     override fun popularMangaFromElement(element: Element): SManga {
         return SManga.create().apply {
             title = element.select("a").attr("title")
-            setUrlWithoutDomain(element.select("a").first().attr("href"))
+            setUrlWithoutDomain(element.select("a").first()!!.attr("href"))
             thumbnail_url = element.select("img").let {
-                if (it.hasAttr("data-src"))
-                    it.attr("abs:data-src") else it.attr("abs:src")
+                if (it.hasAttr("data-src")) {
+                    it.attr("abs:data-src")
+                } else {
+                    it.attr("abs:src")
+                }
             }
         }
     }
@@ -89,8 +92,8 @@ class TeamX : ParsedHttpSource() {
         return SManga.create().apply {
             val linkElement = element.select("div.info a")
             title = linkElement.select("h3").text()
-            setUrlWithoutDomain(linkElement.first().attr("href"))
-            thumbnail_url = element.select("div.imgu img").first().absUrl("src")
+            setUrlWithoutDomain(linkElement.first()!!.attr("href"))
+            thumbnail_url = element.select("div.imgu img").first()!!.absUrl("src")
         }
     }
 
@@ -108,8 +111,8 @@ class TeamX : ParsedHttpSource() {
         return SManga.create().apply {
             val urlAndText = element.select("div.ms-2 a")
             title = urlAndText.text()
-            setUrlWithoutDomain(urlAndText.first().absUrl("href"))
-            thumbnail_url = element.select("a img").first().absUrl("src")
+            setUrlWithoutDomain(urlAndText.first()!!.absUrl("href"))
+            thumbnail_url = element.select("a img").first()!!.absUrl("src")
         }
     }
 
@@ -126,7 +129,7 @@ class TeamX : ParsedHttpSource() {
                 description = document.select("div.review-content p").text()
             }
             genre = document.select("div.review-author-info a").joinToString { it.text() }
-            thumbnail_url = document.select("div.text-right img").first().absUrl("src")
+            thumbnail_url = document.select("div.text-right img").first()!!.absUrl("src")
         }
     }
 
@@ -139,8 +142,9 @@ class TeamX : ParsedHttpSource() {
 
         while (true) {
             val pageChapters = document.select(chapterListSelector())
-            if (pageChapters.isEmpty())
+            if (pageChapters.isEmpty()) {
                 break
+            }
 
             allElements += pageChapters
 
@@ -163,7 +167,6 @@ class TeamX : ParsedHttpSource() {
 
     override fun chapterFromElement(element: Element): SChapter {
         return SChapter.create().apply {
-
             val chpNum = element.select("div.epl-num").text()
             val chpTitle = element.select("div.epl-title").text()
 
@@ -179,7 +182,7 @@ class TeamX : ParsedHttpSource() {
     }
 
     private fun parseChapterDate(date: String): Long {
-        return kotlin.runCatching {
+        return runCatching {
             chapterFormat.parse(date)?.time
         }.getOrNull() ?: 0
     }

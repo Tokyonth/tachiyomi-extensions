@@ -49,14 +49,14 @@ open class OtakuSanctuary(
         FormBody.Builder().apply {
             add("Lang", helper.otakusanLang())
             add("PageSize", "24")
-        }.build()
+        }.build(),
     )
 
     private fun parseMangaCollection(elements: Elements): List<SManga> {
         val page = emptyList<SManga>().toMutableList()
 
         for (element in elements) {
-            val url = element.select("div.mdl-card__title a").first().attr("abs:href")
+            val url = element.select("div.mdl-card__title a").first()!!.attr("abs:href")
             // ignore external chapters
             if (url.toHttpUrl().host != baseUrl.toHttpUrl().host) {
                 continue
@@ -80,7 +80,7 @@ open class OtakuSanctuary(
                 setUrlWithoutDomain(url)
                 title = element.select("div.mdl-card__supporting-text a[target=_blank]").text()
                     .replaceFirstChar { it.titlecase() }
-                thumbnail_url = element.select("div.container-3-4.background-contain img").first().attr("abs:src")
+                thumbnail_url = element.select("div.container-3-4.background-contain img").first()!!.attr("abs:src")
             }
         }
         return page
@@ -102,7 +102,7 @@ open class OtakuSanctuary(
                 addPathSegments("Home/Search")
                 addQueryParameter("search", query)
             }.build().toString(),
-            headers
+            headers,
         )
 
     override fun searchMangaParse(response: Response): MangasPage {
@@ -118,7 +118,7 @@ open class OtakuSanctuary(
             title = document.select("h1.title.text-lg-left.text-overflow-2-line")
                 .text()
                 .replaceFirstChar { it.titlecase() }
-            author = document.select("tr:contains(Tác Giả) a.capitalize").first().text()
+            author = document.select("tr:contains(Tác Giả) a.capitalize").first()!!.text()
                 .replaceFirstChar { it.titlecase() }
             description = document.select("div.summary p").joinToString("\n") {
                 it.run {
@@ -129,7 +129,7 @@ open class OtakuSanctuary(
             genre = document.select("div.genres a").joinToString { it.text() }
             thumbnail_url = document.select("div.container-3-4.background-contain img").attr("abs:src")
 
-            val statusString = document.select("tr:contains(Tình Trạng) td").first().text().trim()
+            val statusString = document.select("tr:contains(Tình Trạng) td").first()!!.text().trim()
             status = when (statusString) {
                 "Ongoing" -> SManga.ONGOING
                 "Done" -> SManga.COMPLETED
@@ -155,7 +155,7 @@ open class OtakuSanctuary(
                 else -> 0L
             }
         } else {
-            return kotlin.runCatching { dateFormat.parse(date)?.time }.getOrNull() ?: 0L
+            return runCatching { dateFormat.parse(date)?.time }.getOrNull() ?: 0L
         }
     }
 
@@ -186,9 +186,9 @@ open class OtakuSanctuary(
                 POST(
                     "$baseUrl/Manga/UpdateView",
                     headers,
-                    FormBody.Builder().add("chapId", numericId).build()
-                )
-            ).execute().body!!.string()
+                    FormBody.Builder().add("chapId", numericId).build(),
+                ),
+            ).execute().body.string(),
         ).jsonObject
 
         if (data["view"] != null) {
@@ -224,9 +224,9 @@ open class OtakuSanctuary(
                     POST(
                         "$baseUrl/Manga/CheckingAlternate",
                         headers,
-                        FormBody.Builder().add("chapId", numericId).build()
-                    )
-                ).execute().body!!.string()
+                        FormBody.Builder().add("chapId", numericId).build(),
+                    ),
+                ).execute().body.string(),
             ).jsonObject
             val content = alternate["Content"]?.jsonPrimitive?.content
                 ?: throw Exception("No pages found")

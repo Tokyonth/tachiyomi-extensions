@@ -31,7 +31,7 @@ abstract class MangaHub(
     override val name: String,
     override val baseUrl: String,
     override val lang: String,
-    private val dateFormat: SimpleDateFormat = SimpleDateFormat("MM-dd-yyyy", Locale.US)
+    private val dateFormat: SimpleDateFormat = SimpleDateFormat("MM-dd-yyyy", Locale.US),
 ) : ParsedHttpSource() {
 
     override val supportsLatest = true
@@ -62,7 +62,7 @@ abstract class MangaHub(
 
             if (uaResponse.isSuccessful) {
                 // only using desktop chromium-based browsers, apparently they refuse to load(403) if not chrome(ium)
-                val uaList = json.decodeFromString<Map<String, List<String>>>(uaResponse.body!!.string())
+                val uaList = json.decodeFromString<Map<String, List<String>>>(uaResponse.body.string())
                 val chromeUserAgentString = uaList["desktop"]!!.filter { it.contains("chrome", ignoreCase = true) }
                 userAgent = chromeUserAgentString.random()
                 checkedUa = true
@@ -171,14 +171,14 @@ abstract class MangaHub(
     override fun mangaDetailsParse(document: Document): SManga {
         val manga = SManga.create()
         manga.title = document.select(".breadcrumb .active span").text()
-        manga.author = document.select("div:has(h1) span:contains(Author) + span")?.first()?.text()
-        manga.artist = document.select("div:has(h1) span:contains(Artist) + span")?.first()?.text()
-        manga.genre = document.select(".row p a")?.joinToString { it.text() }
-        manga.description = document.select(".tab-content p")?.first()?.text()
-        manga.thumbnail_url = document.select("img.img-responsive")?.first()
+        manga.author = document.select("div:has(h1) span:contains(Author) + span").first()?.text()
+        manga.artist = document.select("div:has(h1) span:contains(Artist) + span").first()?.text()
+        manga.genre = document.select(".row p a").joinToString { it.text() }
+        manga.description = document.select(".tab-content p").first()?.text()
+        manga.thumbnail_url = document.select("img.img-responsive").first()
             ?.attr("src")
 
-        document.select("div:has(h1) span:contains(Status) + span")?.first()?.text()?.also { statusText ->
+        document.select("div:has(h1) span:contains(Status) + span").first()?.text()?.also { statusText ->
             when {
                 statusText.contains("ongoing", true) -> manga.status = SManga.ONGOING
                 statusText.contains("completed", true) -> manga.status = SManga.COMPLETED
@@ -190,8 +190,11 @@ abstract class MangaHub(
         document.select("h1 small").firstOrNull()?.ownText()?.let { alternativeName ->
             if (alternativeName.isNotBlank()) {
                 manga.description = manga.description.orEmpty().let {
-                    if (it.isBlank()) "Alternative Name: $alternativeName"
-                    else "$it\n\nAlternative Name: $alternativeName"
+                    if (it.isBlank()) {
+                        "Alternative Name: $alternativeName"
+                    } else {
+                        "$it\n\nAlternative Name: $alternativeName"
+                    }
                 }
             }
         }
@@ -346,7 +349,7 @@ abstract class MangaHub(
 
     override fun getFilterList() = FilterList(
         OrderBy(orderBy),
-        GenreList(genres)
+        GenreList(genres),
     )
 
     private val orderBy = arrayOf(
@@ -354,7 +357,7 @@ abstract class MangaHub(
         Order("Updates", "LATEST"),
         Order("A-Z", "ALPHABET"),
         Order("New", "NEW"),
-        Order("Completed", "COMPLETED")
+        Order("Completed", "COMPLETED"),
     )
 
     private val genres = arrayOf(
@@ -421,7 +424,7 @@ abstract class MangaHub(
         Genre("Webtoon", "webtoon"),
         Genre("Webtoons", "webtoons"),
         Genre("Wuxia", "wuxia"),
-        Genre("Yuri", "yuri")
+        Genre("Yuri", "yuri"),
     )
 
     companion object {

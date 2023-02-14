@@ -34,7 +34,7 @@ abstract class MadTheme(
     override val name: String,
     override val baseUrl: String,
     override val lang: String,
-    private val dateFormat: SimpleDateFormat = SimpleDateFormat("MMM dd, yyy", Locale.US)
+    private val dateFormat: SimpleDateFormat = SimpleDateFormat("MMM dd, yyy", Locale.US),
 ) : ParsedHttpSource() {
 
     override val supportsLatest = true
@@ -176,7 +176,7 @@ abstract class MadTheme(
         }
 
         // Try to show message/error from site
-        response.body?.let { body ->
+        response.body.let { body ->
             json.decodeFromString<JsonObject>(body.string())["message"]
                 ?.jsonPrimitive
                 ?.content
@@ -200,7 +200,7 @@ abstract class MadTheme(
 
     override fun chapterFromElement(element: Element): SChapter = SChapter.create().apply {
         // Not using setUrlWithoutDomain() to support external chapters
-        url = element.selectFirst("a")
+        url = element.selectFirst("a")!!
             .absUrl("href")
             .removePrefix(baseUrl)
 
@@ -211,7 +211,7 @@ abstract class MadTheme(
 
     // Pages
     override fun pageListParse(document: Document): List<Page> {
-        val html = document.html()!!
+        val html = document.html()
 
         if (!html.contains("var mainServer = \"")) {
             // No fancy CDN, all images are available directly in <img> tags
@@ -312,7 +312,7 @@ abstract class MadTheme(
             Pair("All", "all"),
             Pair("Ongoing", "ongoing"),
             Pair("Completed", "completed"),
-        )
+        ),
     )
 
     class OrderFilter(state: Int = 0) : UriPartFilter(
@@ -324,13 +324,13 @@ abstract class MadTheme(
             Pair("Name A-Z", "name"),
             Pair("Rating", "rating"),
         ),
-        state
+        state,
     )
 
     open class UriPartFilter(
         displayName: String,
         private val vals: Array<Pair<String, String>>,
-        state: Int = 0
+        state: Int = 0,
     ) :
         Filter.Select<String>(displayName, vals.map { it.first }.toTypedArray(), state) {
         fun toUriPart() = vals[state].second

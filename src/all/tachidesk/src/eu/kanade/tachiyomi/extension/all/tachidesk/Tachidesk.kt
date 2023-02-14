@@ -65,10 +65,10 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
 
     override fun popularMangaParse(response: Response): MangasPage =
         MangasPage(
-            json.decodeFromString<List<MangaDataClass>>(response.body!!.string()).map {
+            json.decodeFromString<List<MangaDataClass>>(response.body.string()).map {
                 it.toSManga()
             },
-            false
+            false,
         )
     // ------------- Manga Details -------------
 
@@ -76,7 +76,7 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
         GET("$checkedBaseUrl/api/v1/manga/${manga.url}/?onlineFetch=true", headers)
 
     override fun mangaDetailsParse(response: Response): SManga =
-        json.decodeFromString<MangaDataClass>(response.body!!.string()).let { it.toSManga() }
+        json.decodeFromString<MangaDataClass>(response.body.string()).let { it.toSManga() }
 
     // ------------- Chapter -------------
 
@@ -84,7 +84,7 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
         GET("$checkedBaseUrl/api/v1/manga/${manga.url}/chapters?onlineFetch=true", headers)
 
     override fun chapterListParse(response: Response): List<SChapter> =
-        json.decodeFromString<List<ChapterDataClass>>(response.body!!.string()).map {
+        json.decodeFromString<List<ChapterDataClass>>(response.body.string()).map {
             it.toSChapter()
         }
 
@@ -109,7 +109,7 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
         val mangaId = sChapter.url.split(" ").first()
         val chapterIndex = sChapter.url.split(" ").last()
 
-        val chapter = json.decodeFromString<ChapterDataClass>(response.body!!.string())
+        val chapter = json.decodeFromString<ChapterDataClass>(response.body.string())
 
         return List(chapter.pageCount) {
             Page(it + 1, "", "$checkedBaseUrl/api/v1/manga/$mangaId/chapter/$chapterIndex/page/$it/")
@@ -121,7 +121,7 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
     override fun getFilterList(): FilterList =
         FilterList(
             CategorySelect(refreshCategoryList(baseUrl).let { categoryList }),
-            Filter.Header("Press reset to attempt to fetch categories")
+            Filter.Header("Press reset to attempt to fetch categories"),
         )
 
     private var categoryList: List<CategoryDataClass> = emptyList()
@@ -135,12 +135,12 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
             .subscribe(
                 { response ->
                     categoryList = try {
-                        json.decodeFromString<List<CategoryDataClass>>(response.body!!.string())
+                        json.decodeFromString<List<CategoryDataClass>>(response.body.string())
                     } catch (e: Exception) {
                         emptyList()
                     }
                 },
-                {}
+                {},
             )
     }
 
@@ -157,7 +157,7 @@ class Tachidesk : ConfigurableSource, UnmeteredSource, HttpSource() {
         val preferencesMap = mapOf(
             ADDRESS_TITLE to ADDRESS_DEFAULT,
             LOGIN_TITLE to LOGIN_DEFAULT,
-            PASSWORD_TITLE to PASSWORD_DEFAULT
+            PASSWORD_TITLE to PASSWORD_DEFAULT,
         )
 
         preferencesMap.forEach { (key, defaultValue) ->
