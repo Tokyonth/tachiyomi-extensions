@@ -36,18 +36,21 @@ class CosZip : HttpSource() {
         val mangasDoc = document.select(".jeg_posts.jeg_load_more_flag > article")
         mangasDoc.forEach {
             val mTitle = it.selectFirst(".jeg_post_title > a")
-            val mThumbnail = it.selectFirst(".thumbnail-container > img")
-            val mUrl = mTitle!!.attr("href").replace(baseUrl, "")
+            val mThumbnail = it.selectFirst(".thumbnail-container > img")!!.attr("data-src")
+            // val thumbUrl = mThumbnail.split(", ")[0]
+            val mUrl = mTitle!!.attr("href")
+
             val m = SManga.create().apply {
-                url = mUrl
                 title = mTitle.text()
-                //  thumbnail_url = mThumbnail!!.attr("data-src")
+                setUrlWithoutDomain(mUrl)
+                thumbnail_url = mThumbnail.plus("&ssl=1")
                 status = SManga.COMPLETED
                 initialized = true
             }
             mangas.add(m)
         }
-        return MangasPage(mangas, false)
+        val hasMore = document.hasClass("jeg_block_loadmore")
+        return MangasPage(mangas, hasMore)
     }
 
     override fun latestUpdatesRequest(page: Int) =
@@ -63,10 +66,11 @@ class CosZip : HttpSource() {
         }
 
         val filter =
-            filters.filterIsInstance<RegionFilter>().firstOrNull() ?: return popularMangaRequest(
+            filters.filterIsInstance<CategoryFilter>().firstOrNull() ?: return popularMangaRequest(
                 page,
             )
-        return GET("$baseUrl/${filter.name}", headers)
+        val s = filter.values[filter.state].second
+        return GET("$baseUrl/$s", headers)
     }
 
     override fun searchMangaParse(response: Response) = popularMangaParse(response)
@@ -77,7 +81,11 @@ class CosZip : HttpSource() {
         val tags = tagsDoc.joinToString {
             it.text()
         }
+        val mAuthor = document.select(".content-inner > p")[1].text()
+        val desc = document.select(".content-inner > p")[2].text()
         return SManga.create().apply {
+            author = mAuthor.replace("Model name: ", "")
+            description = desc
             genre = tags
         }
     }
@@ -89,12 +97,12 @@ class CosZip : HttpSource() {
         val pageCount = pageIndex.split(" of ")[1].toInt()
         val time = document.selectFirst(".jeg_meta_date > a")!!.text()
 
-        val oUrl = response.request.url.toString().removeSuffix("?amp=1").replace(baseUrl, "")
+        val oUrl = response.request.url.toString().removeSuffix("?amp=1")
         val chapters = mutableListOf<SChapter>()
         for (index in pageCount downTo 1) {
             val mUrl = oUrl.plus("/$index")
             val chapter = SChapter.create().apply {
-                url = mUrl
+                setUrlWithoutDomain(mUrl)
                 name = "Page: $index"
                 date_upload = dateFormat.parse(time)!!.time
                 chapter_number = index.toFloat()
@@ -106,10 +114,10 @@ class CosZip : HttpSource() {
 
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        val pagesDoc = document.select(".content-inner > p > div")
+        val pagesDoc = document.select(".content-inner > p > img")
         val pages = mutableListOf<Page>()
         pagesDoc.forEach {
-            val url = it.selectFirst("amp-img")!!.attr("src")
+            val url = it!!.attr("src")
             val page = Page(pages.size, imageUrl = url)
             pages.add(page)
         }
@@ -119,10 +127,15 @@ class CosZip : HttpSource() {
     override fun imageUrlParse(response: Response) =
         throw UnsupportedOperationException("Not used.")
 
-    override fun getFilterList() = FilterList(RegionFilter())
+    override fun getFilterList() = FilterList(CategoryFilter())
 
-    private class RegionFilter : Filter.Select<String>(
+    private class CategoryFilter : Filter.Select<Pair<String, String>>(
         "Category",
-        arrayOf("All", "COSPLAY", "Erotica/ Nude", "Photobook"),
+        arrayOf(
+            Pair("All", ""),
+            Pair("COSPLAY", ""),
+            Pair("Erotica/ Nude", ""),
+            Pair("Photobook", ""),
+        ),
     )
 }
